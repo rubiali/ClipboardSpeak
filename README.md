@@ -1,26 +1,43 @@
 ```markdown
 <div align="center">
 
-# 🔊 Clipboard English Reader
+# 🔊 ClipboardSpeak
+
+### Transforme qualquer texto copiado em áudio instantaneamente
 
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![CustomTkinter](https://img.shields.io/badge/CustomTkinter-Modern_UI-1F6AA5?style=for-the-badge)](https://github.com/TomSchimansky/CustomTkinter)
-[![Edge TTS](https://img.shields.io/badge/Edge_TTS-Neural_Voices-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://github.com/rany2/edge-tts)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue?style=for-the-badge)]()
+[![Edge TTS](https://img.shields.io/badge/Powered%20by-Edge%20TTS-0078D4?style=for-the-badge&logo=microsoft-edge&logoColor=white)]()
 
-**A modern Text-to-Speech application that automatically reads English text from your clipboard using Microsoft's neural voices.**
+<br>
 
-[Features](#-features) •
-[Installation](#-installation) •
-[Usage](#-usage) •
-[Voices](#-available-voices) •
-[Contributing](#-contributing)
+<img src="https://raw.githubusercontent.com/rubiali/ClipboardSpeak/main/assets/demo.gif" alt="ClipboardSpeak Demo" width="600">
+
+<br>
+
+**Copie qualquer texto em inglês e ouça instantaneamente com vozes neurais de alta qualidade.**
+
+[📥 Download](#-instalação) •
+[✨ Features](#-features) •
+[🚀 Como Usar](#-como-usar) •
+[🤝 Contribuir](#-contribuindo)
+
+</div>
 
 ---
 
-<img src="https://raw.githubusercontent.com/yourusername/clipboard-english-reader/main/assets/demo.gif" alt="Demo" width="600">
+## 📋 Sobre
 
-</div>
+**ClipboardSpeak** é uma aplicação moderna de Text-to-Speech que monitora automaticamente sua área de transferência e reproduz qualquer texto em inglês copiado usando as vozes neurais do Microsoft Edge TTS — as mesmas vozes naturais usadas pelo Microsoft Edge.
+
+Perfeito para:
+- 📚 **Estudantes de inglês** que querem melhorar a pronúncia
+- 👨‍💻 **Desenvolvedores** que leem documentação em inglês
+- 📖 **Leitores** que preferem ouvir artigos e textos
+- ♿ **Acessibilidade** para usuários com dificuldades visuais
+
+---
 
 ## ✨ Features
 
@@ -28,54 +45,66 @@
 <tr>
 <td width="50%">
 
-### 🎯 Core Features
-- **Automatic Detection** — Instantly reads any text copied to clipboard
-- **18 Neural Voices** — Natural-sounding voices from 6 English-speaking regions
-- **System Tray** — Runs silently in background
-- **Reading History** — Track your last 50 readings
+### 🎤 18 Vozes Neurais
+Vozes naturais de 6 países diferentes:
+- 🇺🇸 Estados Unidos (6 vozes)
+- 🇬🇧 Reino Unido (4 vozes)
+- 🇦🇺 Austrália (2 vozes)
+- 🇨🇦 Canadá (2 vozes)
+- 🇮🇳 Índia (2 vozes)
+- 🇮🇪 Irlanda (2 vozes)
 
 </td>
 <td width="50%">
 
-### 🎨 User Experience
-- **Modern Dark UI** — Beautiful CustomTkinter interface
-- **Volume & Speed Control** — Adjust playback to your preference
-- **Random Voice Mode** — Variety with each reading
-- **One-Click Preview** — Test any voice instantly
+### ⚡ Funcionalidades
+- 🔄 Monitoramento automático do clipboard
+- 🎲 Modo de voz aleatória
+- 🔊 Controle de volume em tempo real
+- ⚡ Ajuste de velocidade (-50% a +50%)
+- 📜 Histórico de leituras
+- 📥 Minimiza para System Tray
 
 </td>
 </tr>
 </table>
 
-## 🚀 Installation
+### 🎨 Interface Moderna
 
-### Prerequisites
+| Dark Mode | System Tray |
+|:---------:|:-----------:|
+| Interface elegante com CustomTkinter | Continue ouvindo em segundo plano |
+| Abas organizadas e intuitivas | Controle rápido pelo ícone |
 
-- Python 3.8 or higher
-- Windows 10/11 (recommended) or Linux/macOS
+---
 
-### Quick Install
+## 🚀 Instalação
+
+### Pré-requisitos
+
+- Python 3.8 ou superior
+- pip (gerenciador de pacotes Python)
+
+### Instalação Rápida
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/clipboard-english-reader.git
-cd clipboard-english-reader
+# Clone o repositório
+git clone https://github.com/rubiali/ClipboardSpeak.git
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
+# Entre no diretório
+cd ClipboardSpeak
 
-# Install dependencies
+# Instale as dependências
 pip install -r requirements.txt
+
+# Execute
+python clipboardspeak.py
 ```
 
-### Dependencies
-
-Create a `requirements.txt` file:
+### 📦 Dependências
 
 ```txt
-customtkinter>=5.2.0
+customtkinter>=5.0.0
 edge-tts>=6.1.0
 pygame>=2.5.0
 pyperclip>=1.8.0
@@ -83,223 +112,201 @@ pystray>=0.19.0
 Pillow>=10.0.0
 ```
 
-Or install manually:
+<details>
+<summary><b>📥 Instalação manual das dependências</b></summary>
 
 ```bash
 pip install customtkinter edge-tts pygame pyperclip pystray Pillow
 ```
 
-## 📖 Usage
+</details>
 
-### Starting the Application
+---
+
+## 🎮 Como Usar
+
+### Uso Básico
+
+1. **Execute** o ClipboardSpeak
+2. **Copie** qualquer texto em inglês (Ctrl+C)
+3. **Ouça** automaticamente! 🔊
+
+### Controles
+
+| Ação | Descrição |
+|------|-----------|
+| `📡 Monitoring` | Liga/desliga monitoramento automático |
+| `⏹️ Stop` | Para a reprodução atual |
+| `▶️ Test Voice` | Testa a voz selecionada |
+| `📋 Read Clipboard` | Lê manualmente o clipboard atual |
+
+### ⌨️ Atalhos
+
+- **Ctrl+C** → Copie texto para ouvir automaticamente
+- **System Tray** → Clique duplo para restaurar janela
+
+---
+
+## 🏗️ Arquitetura
+
+```
+ClipboardSpeak/
+├── 📄 clipboardspeak.py    # Aplicação principal
+├── 📄 requirements.txt     # Dependências
+├── 📄 README.md           # Documentação
+├── 📄 LICENSE             # Licença MIT
+└── 📁 assets/             # Recursos (ícones, imagens)
+```
+
+### 🔧 Tecnologias Utilizadas
+
+<div align="center">
+
+| Tecnologia | Uso |
+|:----------:|:---:|
+| ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) | Linguagem principal |
+| ![CustomTkinter](https://img.shields.io/badge/CustomTkinter-2B2B2B?style=flat-square&logo=python&logoColor=white) | Interface gráfica moderna |
+| ![Edge TTS](https://img.shields.io/badge/Edge_TTS-0078D4?style=flat-square&logo=microsoft-edge&logoColor=white) | Síntese de voz neural |
+| ![Pygame](https://img.shields.io/badge/Pygame-3DDC84?style=flat-square&logo=python&logoColor=white) | Reprodução de áudio |
+
+</div>
+
+---
+
+## 🗣️ Vozes Disponíveis
+
+<details>
+<summary><b>🇺🇸 Estados Unidos</b></summary>
+
+| Voz | Gênero | ID |
+|-----|--------|-----|
+| Aria | Feminino | `en-US-AriaNeural` |
+| Jenny | Feminino | `en-US-JennyNeural` |
+| Michelle | Feminino | `en-US-MichelleNeural` |
+| Guy | Masculino | `en-US-GuyNeural` |
+| Christopher | Masculino | `en-US-ChristopherNeural` |
+| Eric | Masculino | `en-US-EricNeural` |
+
+</details>
+
+<details>
+<summary><b>🇬🇧 Reino Unido</b></summary>
+
+| Voz | Gênero | ID |
+|-----|--------|-----|
+| Sonia | Feminino | `en-GB-SoniaNeural` |
+| Libby | Feminino | `en-GB-LibbyNeural` |
+| Ryan | Masculino | `en-GB-RyanNeural` |
+| Thomas | Masculino | `en-GB-ThomasNeural` |
+
+</details>
+
+<details>
+<summary><b>🌏 Outras Regiões</b></summary>
+
+| País | Vozes |
+|------|-------|
+| 🇦🇺 Austrália | Natasha, William |
+| 🇨🇦 Canadá | Clara, Liam |
+| 🇮🇳 Índia | Neerja, Prabhat |
+| 🇮🇪 Irlanda | Emily, Connor |
+
+</details>
+
+---
+
+## 🛠️ Desenvolvimento
+
+### Executar em modo de desenvolvimento
 
 ```bash
-python clipboard_reader.py
+# Clone com SSH
+git clone git@github.com:rubiali/ClipboardSpeak.git
+
+# Crie um ambiente virtual (recomendado)
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+# Instale dependências
+pip install -r requirements.txt
+
+# Execute
+python clipboardspeak.py
 ```
 
-### How It Works
+### 📦 Build Executável (Windows)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. 📋 Copy any English text (Ctrl+C / Cmd+C)               │
-│  2. 🔊 Audio plays automatically                            │
-│  3. ⏹️  Use Stop button to interrupt if needed              │
-│  4. 📥 Minimize to tray to keep running in background       │
-└─────────────────────────────────────────────────────────────┘
+```bash
+pip install pyinstaller
+
+pyinstaller --onefile --windowed --icon=assets/icon.ico --name=ClipboardSpeak clipboardspeak.py
 ```
 
-### Interface Overview
+---
 
-| Tab | Description |
-|-----|-------------|
-| 🏠 **Main** | Control panel with volume, speed, and quick actions |
-| 🎤 **Voices** | Browse and select from 18 available voices |
-| 📜 **History** | View your reading history with timestamps |
-| ⚙️ **Settings** | Configure behavior and preferences |
+## 🤝 Contribuindo
 
-## 🎤 Available Voices
+Contribuições são muito bem-vindas! 
 
-<details>
-<summary><b>🇺🇸 United States (6 voices)</b></summary>
+1. **Fork** o projeto
+2. Crie sua **Feature Branch** (`git checkout -b feature/NovaFeature`)
+3. **Commit** suas mudanças (`git commit -m 'Add: nova feature'`)
+4. **Push** para a Branch (`git push origin feature/NovaFeature`)
+5. Abra um **Pull Request**
 
-| Voice | Gender | ID |
-|-------|--------|-----|
-| Aria | Female | `en-US-AriaNeural` |
-| Jenny | Female | `en-US-JennyNeural` |
-| Michelle | Female | `en-US-MichelleNeural` |
-| Guy | Male | `en-US-GuyNeural` |
-| Christopher | Male | `en-US-ChristopherNeural` |
-| Eric | Male | `en-US-EricNeural` |
+### 💡 Ideias para Contribuir
 
-</details>
+- [ ] Suporte a mais idiomas
+- [ ] Atalhos de teclado globais
+- [ ] Configurações persistentes
+- [ ] Tradução da interface
+- [ ] Tema claro
 
-<details>
-<summary><b>🇬🇧 United Kingdom (4 voices)</b></summary>
+---
 
-| Voice | Gender | ID |
-|-------|--------|-----|
-| Sonia | Female | `en-GB-SoniaNeural` |
-| Libby | Female | `en-GB-LibbyNeural` |
-| Ryan | Male | `en-GB-RyanNeural` |
-| Thomas | Male | `en-GB-ThomasNeural` |
+## 📄 Licença
 
-</details>
+Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
 
-<details>
-<summary><b>🇦🇺 Australia (2 voices)</b></summary>
+---
 
-| Voice | Gender | ID |
-|-------|--------|-----|
-| Natasha | Female | `en-AU-NatashaNeural` |
-| William | Male | `en-AU-WilliamNeural` |
-
-</details>
-
-<details>
-<summary><b>🇨🇦 Canada (2 voices)</b></summary>
-
-| Voice | Gender | ID |
-|-------|--------|-----|
-| Clara | Female | `en-CA-ClaraNeural` |
-| Liam | Male | `en-CA-LiamNeural` |
-
-</details>
-
-<details>
-<summary><b>🇮🇳 India (2 voices)</b></summary>
-
-| Voice | Gender | ID |
-|-------|--------|-----|
-| Neerja | Female | `en-IN-NeerjaNeural` |
-| Prabhat | Male | `en-IN-PrabhatNeural` |
-
-</details>
-
-<details>
-<summary><b>🇮🇪 Ireland (2 voices)</b></summary>
-
-| Voice | Gender | ID |
-|-------|--------|-----|
-| Emily | Female | `en-IE-EmilyNeural` |
-| Connor | Male | `en-IE-ConnorNeural` |
-
-</details>
-
-## 🏗️ Project Structure
-
-```
-clipboard-english-reader/
-├── 📄 clipboard_reader.py    # Main application
-├── 📄 requirements.txt       # Python dependencies
-├── 📄 README.md             # Documentation
-├── 📄 LICENSE               # MIT License
-└── 📁 assets/               # Images and resources
-    └── 📄 demo.gif          # Demo animation
-```
-
-## ⚙️ Configuration
-
-### Speed Control
-
-| Value | Description |
-|-------|-------------|
-| `-50%` | Half speed (slow reading) |
-| `0%` | Normal speed |
-| `+50%` | 1.5x speed (fast reading) |
-
-### System Tray Options
-
-| Action | Description |
-|--------|-------------|
-| **Show Window** | Restore the main window |
-| **Pause/Resume** | Toggle clipboard monitoring |
-| **Stop Audio** | Stop current playback |
-| **Exit** | Close the application completely |
-
-## 🛠️ Tech Stack
+## 👤 Autor
 
 <div align="center">
 
-| Technology | Purpose |
-|:----------:|:-------:|
-| ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) | Core Language |
-| ![CustomTkinter](https://img.shields.io/badge/CustomTkinter-1F6AA5?style=flat-square) | Modern UI Framework |
-| ![Edge TTS](https://img.shields.io/badge/Edge_TTS-0078D4?style=flat-square&logo=microsoft&logoColor=white) | Neural Text-to-Speech |
-| ![Pygame](https://img.shields.io/badge/Pygame-3DDC84?style=flat-square) | Audio Playback |
-| ![Pystray](https://img.shields.io/badge/Pystray-FFA500?style=flat-square) | System Tray Integration |
+**Criado com ❤️ por [@rubiali](https://github.com/rubiali)**
+
+[![GitHub](https://img.shields.io/badge/GitHub-rubiali-181717?style=for-the-badge&logo=github)](https://github.com/rubiali)
 
 </div>
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how you can help:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
-3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
-4. **Push** to the branch (`git push origin feature/AmazingFeature`)
-5. **Open** a Pull Request
-
-### Ideas for Contribution
-
-- [ ] Add support for more languages
-- [ ] Implement keyboard shortcuts
-- [ ] Add text filtering options
-- [ ] Create installer/executable
-- [ ] Add pronunciation dictionary
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Microsoft Edge TTS](https://github.com/rany2/edge-tts) for the amazing neural voices
-- [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) for the modern UI components
-- [Pygame](https://www.pygame.org/) for reliable audio playback
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for English learners everywhere**
+### ⭐ Se este projeto te ajudou, considere dar uma estrela!
 
-⭐ Star this repo if you find it useful!
+<br>
+
+[![Star History Chart](https://api.star-history.com/svg?repos=rubiali/ClipboardSpeak&type=Date)](https://star-history.com/#rubiali/ClipboardSpeak&Date)
 
 </div>
 ```
 
 ---
 
-## 📌 Observações
+## 📁 Arquivo `requirements.txt`
 
-1. **Substitua** `yourusername` pelo seu usuário do GitHub
-2. **Adicione** uma pasta `assets/` com um GIF de demonstração do app
-3. **Crie** o arquivo `LICENSE` com a licença MIT se desejar
-4. **Ajuste** os badges conforme necessário
+Crie também este arquivo na raiz do projeto:
 
-### Arquivo LICENSE (MIT) opcional:
-
+```txt
+customtkinter>=5.0.0
+edge-tts>=6.1.0
+pygame>=2.5.0
+pyperclip>=1.8.0
+pystray>=0.19.0
+Pillow>=10.0.0
 ```
-MIT License
 
-Copyright (c) 2025 Your Name
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+---
