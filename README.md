@@ -1,4 +1,3 @@
-```markdown
 <div align="center">
 
 # 🔊 ClipboardSpeak
@@ -278,18 +277,6 @@ Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
 **Criado com ❤️ por [@rubiali](https://github.com/rubiali)**
 
 [![GitHub](https://img.shields.io/badge/GitHub-rubiali-181717?style=for-the-badge&logo=github)](https://github.com/rubiali)
-
-</div>
-
----
-
-<div align="center">
-
-### ⭐ Se este projeto te ajudou, considere dar uma estrela!
-
-<br>
-
-[![Star History Chart](https://api.star-history.com/svg?repos=rubiali/ClipboardSpeak&type=Date)](https://star-history.com/#rubiali/ClipboardSpeak&Date)
 
 </div>
 ```
