@@ -2,6 +2,7 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                      CLIPBOARD ENGLISH READER                                 ║
 ║                   Modern TTS App with System Tray                            ║
+║                         v1.1 - Enhanced Edition                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 
@@ -14,11 +15,15 @@ import random
 import time
 import os
 import sys
+import re
+from datetime import datetime
+from pathlib import Path
 
 import pyperclip
 import pygame
 import edge_tts
 import pystray
+import keyboard  # pip install keyboard
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIGURAÇÃO DO TEMA
@@ -91,22 +96,40 @@ VOICE_CATEGORIES = {
     ],
 }
 
+# Mapeamento de regiões para filtro de voz aleatória
+RANDOM_VOICE_FILTERS = {
+    "🌍 All Voices": None,  # None = todas as vozes
+    "🇺🇸 US Only": "🇺🇸 United States",
+    "🇬🇧 UK Only": "🇬🇧 United Kingdom",
+    "🇦🇺 Australia Only": "🇦🇺 Australia",
+    "🇨🇦 Canada Only": "🇨🇦 Canada",
+    "🇮🇳 India Only": "🇮🇳 India",
+    "🇮🇪 Ireland Only": "🇮🇪 Ireland",
+    "🇺🇸🇬🇧 US + UK": ["🇺🇸 United States", "🇬🇧 United Kingdom"],
+    "🌎 Americas (US + CA)": ["🇺🇸 United States", "🇨🇦 Canada"],
+}
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ESTADO GLOBAL
 # ══════════════════════════════════════════════════════════════════════════════
 
 class AppState:
     last_clipboard = ""
+    last_spoken_text = ""  # Último texto falado (para CTRL+R)
     stop_flag = False
     is_monitoring = True
     current_audio_file = None
     volume = 1.0
     rate = "+0%"
     use_random_voice = False
+    random_voice_filter = "🌍 All Voices"  # Filtro de região para voz aleatória
     text_history = []
     is_speaking = False
-    is_minimized = False  # Flag para rastrear se está minimizado
-    pending_text = None   # Texto pendente para atualizar quando restaurar
+    is_minimized = False
+    pending_text = None
+    # Configurações de salvamento MP3
+    save_mp3_enabled = False
+    mp3_save_path = str(Path.home() / "Documents" / "ClipboardReader_Audio")
 
 state = AppState()
 
@@ -125,7 +148,9 @@ def cleanup_audio():
     if state.current_audio_file and os.path.exists(state.current_audio_file):
         try:
             pygame.mixer.music.unload()
-            os.unlink(state.current_audio_file)
+            # Só deleta se não for arquivo salvo pelo usuário
+            if tempfile.gettempdir() in state.current_audio_file:
+                os.unlink(state.current_audio_file)
         except Exception:
             pass
 
@@ -189,8 +214,74 @@ def generate_tts(text, out_path, voice, rate="+0%"):
         loop.close()
 
 def get_random_voice():
-    """Retorna uma voz aleatória."""
+    """Retorna uma voz aleatória baseada no filtro selecionado."""
+    filter_key = state.random_voice_filter
+    filter_value = RANDOM_VOICE_FILTERS.get(filter_key)
+    
+    if filter_value is None:
+        # Todas as vozes
+        return random.choice(list(VOICES.values()))
+    
+    # Coleta vozes das categorias filtradas
+    available_voices = []
+    
+    if isinstance(filter_value, list):
+        # Múltiplas categorias
+        for category in filter_value:
+            if category in VOICE_CATEGORIES:
+                for voice_name in VOICE_CATEGORIES[category]:
+                    if voice_name in VOICES:
+                        available_voices.append(VOICES[voice_name])
+    else:
+        # Uma única categoria
+        if filter_value in VOICE_CATEGORIES:
+            for voice_name in VOICE_CATEGORIES[filter_value]:
+                if voice_name in VOICES:
+                    available_voices.append(VOICES[voice_name])
+    
+    if available_voices:
+        return random.choice(available_voices)
+    
+    # Fallback para qualquer voz se não encontrar
     return random.choice(list(VOICES.values()))
+
+def sanitize_filename(text, max_length=50):
+    """Sanitiza texto para uso como nome de arquivo."""
+    # Remove caracteres inválidos
+    sanitized = re.sub(r'[<>:"/\\|?*\n\r\t]', '', text)
+    # Substitui espaços múltiplos por um único
+    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    # Limita o tamanho
+    if len(sanitized) > max_length:
+        sanitized = sanitized[:max_length].rsplit(' ', 1)[0]
+    return sanitized or "audio"
+
+def save_mp3_copy(source_path, text):
+    """Salva uma cópia do MP3 na pasta configurada."""
+    if not state.save_mp3_enabled:
+        return None
+    
+    try:
+        # Cria pasta se não existir
+        save_dir = Path(state.mp3_save_path)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Gera nome do arquivo
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        text_preview = sanitize_filename(text, 40)
+        filename = f"{timestamp}_{text_preview}.mp3"
+        
+        dest_path = save_dir / filename
+        
+        # Copia o arquivo
+        import shutil
+        shutil.copy2(source_path, dest_path)
+        
+        print(f"[INFO] MP3 salvo: {dest_path}")
+        return str(dest_path)
+    except Exception as e:
+        print(f"[ERRO] Salvar MP3: {e}")
+        return None
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MONITOR DE CLIPBOARD
@@ -214,6 +305,7 @@ def monitor_clipboard(get_voice, get_rate, on_text_detected=None):
                 continue
             
             state.last_clipboard = txt
+            state.last_spoken_text = txt  # Salva para CTRL+R
             
             # Adiciona ao histórico
             timestamp = time.strftime("%H:%M:%S")
@@ -221,10 +313,10 @@ def monitor_clipboard(get_voice, get_rate, on_text_detected=None):
             if len(state.text_history) > 50:
                 state.text_history.pop()
             
-            # Guarda texto para callback (será processado na UI thread)
+            # Guarda texto para callback
             state.pending_text = txt
             
-            # Callback para UI (só se não estiver minimizado)
+            # Callback para UI
             if on_text_detected and not state.is_minimized:
                 on_text_detected(txt)
             
@@ -236,6 +328,8 @@ def monitor_clipboard(get_voice, get_rate, on_text_detected=None):
             rate = get_rate()
             
             if generate_tts(txt, tmp.name, voice, rate):
+                # Salva cópia se habilitado
+                save_mp3_copy(tmp.name, txt)
                 play_audio(tmp.name)
             else:
                 try:
@@ -283,6 +377,9 @@ def create_tray_icon(app_ref):
     def on_stop(icon, item):
         stop_audio()
     
+    def on_reread(icon, item):
+        app_ref.after(0, app_ref._reread_last_text)
+    
     def on_quit(icon, item):
         app_ref.after(0, app_ref._quit_app)
     
@@ -293,6 +390,7 @@ def create_tray_icon(app_ref):
         pystray.MenuItem("📖 Show Window", on_show, default=True),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(get_pause_text, on_pause),
+        pystray.MenuItem("🔄 Re-read (Ctrl+R)", on_reread),
         pystray.MenuItem("⏹️ Stop Audio", on_stop),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("❌ Exit", on_quit)
@@ -320,13 +418,13 @@ class App(ctk.CTk):
         # ══════════════════════════════════════════════════════════════════
         
         self.title("Clipboard English Reader")
-        self.geometry("600x700")
-        self.minsize(550, 650)
+        self.geometry("600x750")
+        self.minsize(550, 700)
         
         # Centraliza na tela
         self.update_idletasks()
         x = (self.winfo_screenwidth() - 600) // 2
-        y = (self.winfo_screenheight() - 700) // 2
+        y = (self.winfo_screenheight() - 750) // 2
         self.geometry(f"+{x}+{y}")
         
         # Variáveis
@@ -336,6 +434,9 @@ class App(ctk.CTk):
         self.monitoring_var = ctk.BooleanVar(value=True)
         self.minimize_to_tray_var = ctk.BooleanVar(value=True)
         self.random_voice_var = ctk.BooleanVar(value=False)
+        self.random_filter_var = ctk.StringVar(value="🌍 All Voices")
+        self.save_mp3_var = ctk.BooleanVar(value=False)
+        self.mp3_path_var = ctk.StringVar(value=state.mp3_save_path)
         
         # Tray icon
         self.tray_icon = None
@@ -345,10 +446,9 @@ class App(ctk.CTk):
         self._ui_update_job = None
         
         # ══════════════════════════════════════════════════════════════════
-        # INICIALIZA CLIPBOARD STATE (FIX DO BUG)
+        # INICIALIZA CLIPBOARD STATE
         # ══════════════════════════════════════════════════════════════════
         
-        # Captura o que já está no clipboard para NÃO ler ao iniciar
         try:
             initial_clipboard = pyperclip.paste()
             if initial_clipboard:
@@ -361,6 +461,12 @@ class App(ctk.CTk):
         # ══════════════════════════════════════════════════════════════════
         
         self._create_ui()
+        
+        # ══════════════════════════════════════════════════════════════════
+        # REGISTRA HOTKEY GLOBAL
+        # ══════════════════════════════════════════════════════════════════
+        
+        self._register_global_hotkey()
         
         # ══════════════════════════════════════════════════════════════════
         # INICIA MONITOR
@@ -382,6 +488,47 @@ class App(ctk.CTk):
         
         # Update loop para UI
         self._start_ui_loop()
+    
+    def _register_global_hotkey(self):
+        """Registra hotkey global CTRL+R."""
+        try:
+            keyboard.add_hotkey('ctrl+r', self._on_global_reread, suppress=False)
+            print("[INFO] Hotkey CTRL+R registrada com sucesso")
+        except Exception as e:
+            print(f"[AVISO] Não foi possível registrar hotkey global: {e}")
+    
+    def _unregister_global_hotkey(self):
+        """Remove hotkey global."""
+        try:
+            keyboard.unhook_all_hotkeys()
+        except Exception:
+            pass
+    
+    def _on_global_reread(self):
+        """Callback para hotkey CTRL+R."""
+        # Executa na thread principal
+        self.after(0, self._reread_last_text)
+    
+    def _reread_last_text(self):
+        """Relê o último texto falado."""
+        if not state.last_spoken_text:
+            print("[INFO] Nenhum texto para reler")
+            return
+        
+        def reread_thread():
+            try:
+                txt = state.last_spoken_text
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                tmp.close()
+                
+                if generate_tts(txt, tmp.name, self._get_voice(), self._get_rate()):
+                    # Salva cópia se habilitado
+                    save_mp3_copy(tmp.name, txt)
+                    play_audio(tmp.name)
+            except Exception as e:
+                print(f"[ERRO] Re-read: {e}")
+        
+        threading.Thread(target=reread_thread, daemon=True).start()
     
     def _create_ui(self):
         """Constrói interface."""
@@ -406,7 +553,7 @@ class App(ctk.CTk):
         
         subtitle = ctk.CTkLabel(
             title_frame,
-            text="Copy any English text to hear it spoken",
+            text="Copy any English text to hear it spoken • Ctrl+R to repeat",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
@@ -517,24 +664,36 @@ class App(ctk.CTk):
         self.stop_btn = ctk.CTkButton(
             btn_frame,
             text="⏹️ Stop",
-            width=100,
+            width=80,
             height=40,
             corner_radius=10,
             fg_color="#E74C3C",
             hover_color="#C0392B",
             command=stop_audio
         )
-        self.stop_btn.pack(side="left", padx=(0, 8))
+        self.stop_btn.pack(side="left", padx=(0, 6))
+        
+        self.reread_btn = ctk.CTkButton(
+            btn_frame,
+            text="🔄 Re-read",
+            width=95,
+            height=40,
+            corner_radius=10,
+            fg_color="#9B59B6",
+            hover_color="#8E44AD",
+            command=self._reread_last_text
+        )
+        self.reread_btn.pack(side="left", padx=(0, 6))
         
         self.preview_btn = ctk.CTkButton(
             btn_frame,
-            text="▶️ Test Voice",
-            width=120,
+            text="▶️ Test",
+            width=80,
             height=40,
             corner_radius=10,
             command=self._preview_voice
         )
-        self.preview_btn.pack(side="left", padx=(0, 8))
+        self.preview_btn.pack(side="left", padx=(0, 6))
         
         self.read_btn = ctk.CTkButton(
             btn_frame,
@@ -547,6 +706,15 @@ class App(ctk.CTk):
             command=self._read_current_clipboard
         )
         self.read_btn.pack(side="left")
+        
+        # Hotkey hint
+        hotkey_hint = ctk.CTkLabel(
+            controls_card,
+            text="💡 Press Ctrl+R anywhere to re-read last text",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        )
+        hotkey_hint.pack(anchor="w", padx=15, pady=(0, 10))
         
         # Volume Control
         vol_card = ctk.CTkFrame(self.tab_main, corner_radius=12)
@@ -674,6 +842,39 @@ class App(ctk.CTk):
         )
         self.random_switch.pack(side="right")
         
+        # Random Voice Filter (Região)
+        filter_card = ctk.CTkFrame(self.tab_voices, corner_radius=12)
+        filter_card.pack(fill="x", padx=10, pady=5)
+        
+        filter_inner = ctk.CTkFrame(filter_card, fg_color="transparent")
+        filter_inner.pack(fill="x", padx=15, pady=12)
+        
+        filter_left = ctk.CTkFrame(filter_inner, fg_color="transparent")
+        filter_left.pack(side="left")
+        
+        ctk.CTkLabel(
+            filter_left,
+            text="🌍 Random Voice Region",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w")
+        
+        ctk.CTkLabel(
+            filter_left,
+            text="Filter which accents to use in random mode",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).pack(anchor="w")
+        
+        self.random_filter_combo = ctk.CTkComboBox(
+            filter_inner,
+            variable=self.random_filter_var,
+            values=list(RANDOM_VOICE_FILTERS.keys()),
+            width=180,
+            command=self._on_random_filter_change,
+            state="readonly"
+        )
+        self.random_filter_combo.pack(side="right")
+        
         # Voice Selection
         select_card = ctk.CTkFrame(self.tab_voices, corner_radius=12)
         select_card.pack(fill="both", expand=True, padx=10, pady=5)
@@ -774,9 +975,98 @@ class App(ctk.CTk):
     def _build_settings_tab(self):
         """Aba de configurações."""
         
-        # Behavior Settings
+        # ══════════════════════════════════════════════════════════════════
+        # SAVE MP3 SETTINGS
+        # ══════════════════════════════════════════════════════════════════
+        
+        mp3_card = ctk.CTkFrame(self.tab_settings, corner_radius=12)
+        mp3_card.pack(fill="x", padx=10, pady=(10, 5))
+        
+        ctk.CTkLabel(
+            mp3_card,
+            text="💾 Save MP3 for Offline Study",
+            font=ctk.CTkFont(size=15, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(12, 8))
+        
+        # Toggle para salvar MP3
+        mp3_toggle_frame = ctk.CTkFrame(mp3_card, fg_color="transparent")
+        mp3_toggle_frame.pack(fill="x", padx=15, pady=5)
+        
+        mp3_left = ctk.CTkFrame(mp3_toggle_frame, fg_color="transparent")
+        mp3_left.pack(side="left")
+        
+        ctk.CTkLabel(
+            mp3_left,
+            text="Auto-save audio files",
+            font=ctk.CTkFont(size=14)
+        ).pack(anchor="w")
+        
+        ctk.CTkLabel(
+            mp3_left,
+            text="Save a copy of each audio for later playback",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).pack(anchor="w")
+        
+        self.save_mp3_switch = ctk.CTkSwitch(
+            mp3_toggle_frame,
+            text="",
+            variable=self.save_mp3_var,
+            command=self._toggle_save_mp3,
+            onvalue=True,
+            offvalue=False
+        )
+        self.save_mp3_switch.pack(side="right")
+        
+        # Pasta de destino
+        path_frame = ctk.CTkFrame(mp3_card, fg_color="transparent")
+        path_frame.pack(fill="x", padx=15, pady=(10, 5))
+        
+        ctk.CTkLabel(
+            path_frame,
+            text="📁 Save Location:",
+            font=ctk.CTkFont(size=13)
+        ).pack(anchor="w")
+        
+        path_input_frame = ctk.CTkFrame(path_frame, fg_color="transparent")
+        path_input_frame.pack(fill="x", pady=5)
+        
+        self.mp3_path_entry = ctk.CTkEntry(
+            path_input_frame,
+            textvariable=self.mp3_path_var,
+            font=ctk.CTkFont(size=12),
+            height=35
+        )
+        self.mp3_path_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        
+        browse_btn = ctk.CTkButton(
+            path_input_frame,
+            text="📂 Browse",
+            width=90,
+            height=35,
+            corner_radius=8,
+            command=self._browse_mp3_folder
+        )
+        browse_btn.pack(side="right")
+        
+        open_folder_btn = ctk.CTkButton(
+            mp3_card,
+            text="📂 Open Saved Files Folder",
+            width=200,
+            height=32,
+            corner_radius=8,
+            fg_color="#27AE60",
+            hover_color="#1E8449",
+            command=self._open_mp3_folder
+        )
+        open_folder_btn.pack(anchor="w", padx=15, pady=(5, 12))
+        
+        # ══════════════════════════════════════════════════════════════════
+        # BEHAVIOR SETTINGS
+        # ══════════════════════════════════════════════════════════════════
+        
         behavior_card = ctk.CTkFrame(self.tab_settings, corner_radius=12)
-        behavior_card.pack(fill="x", padx=10, pady=(10, 5))
+        behavior_card.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(
             behavior_card,
@@ -827,7 +1117,49 @@ class App(ctk.CTk):
             text_color="gray"
         ).pack(anchor="w")
         
-        # About Card
+        # ══════════════════════════════════════════════════════════════════
+        # KEYBOARD SHORTCUTS
+        # ══════════════════════════════════════════════════════════════════
+        
+        shortcuts_card = ctk.CTkFrame(self.tab_settings, corner_radius=12)
+        shortcuts_card.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            shortcuts_card,
+            text="⌨️ Keyboard Shortcuts",
+            font=ctk.CTkFont(size=15, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(12, 8))
+        
+        shortcuts = [
+            ("Ctrl+C", "Copy text → Auto-read"),
+            ("Ctrl+R", "Re-read last text (global hotkey)"),
+        ]
+        
+        for key, desc in shortcuts:
+            shortcut_frame = ctk.CTkFrame(shortcuts_card, fg_color="transparent")
+            shortcut_frame.pack(fill="x", padx=15, pady=3)
+            
+            key_label = ctk.CTkLabel(
+                shortcut_frame,
+                text=key,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color="#3B8ED0",
+                width=80
+            )
+            key_label.pack(side="left")
+            
+            ctk.CTkLabel(
+                shortcut_frame,
+                text=desc,
+                font=ctk.CTkFont(size=12)
+            ).pack(side="left")
+        
+        ctk.CTkFrame(shortcuts_card, height=10, fg_color="transparent").pack()
+        
+        # ══════════════════════════════════════════════════════════════════
+        # ABOUT
+        # ══════════════════════════════════════════════════════════════════
+        
         about_card = ctk.CTkFrame(self.tab_settings, corner_radius=12)
         about_card.pack(fill="x", padx=10, pady=5)
         
@@ -837,16 +1169,14 @@ class App(ctk.CTk):
             font=ctk.CTkFont(size=15, weight="bold")
         ).pack(anchor="w", padx=15, pady=(12, 8))
         
-        about_text = """Clipboard English Reader v1.0
-
-Automatically reads English text copied to clipboard using Microsoft Edge TTS voices.
+        about_text = """Clipboard English Reader v1.1
 
 Features:
-• 18 natural-sounding voices
-• Adjustable volume and speed
-• Random voice mode
-• System tray support
-• Reading history"""
+• 18 natural-sounding voices from 6 regions
+• Global Ctrl+R hotkey to re-read
+• Save MP3 for offline study
+• Random voice with region filter
+• Adjustable volume and speed"""
         
         ctk.CTkLabel(
             about_card,
@@ -855,43 +1185,6 @@ Features:
             justify="left",
             text_color="gray"
         ).pack(anchor="w", padx=15, pady=(0, 12))
-        
-        # Keyboard shortcuts
-        shortcuts_card = ctk.CTkFrame(self.tab_settings, corner_radius=12)
-        shortcuts_card.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkLabel(
-            shortcuts_card,
-            text="⌨️ How to Use",
-            font=ctk.CTkFont(size=15, weight="bold")
-        ).pack(anchor="w", padx=15, pady=(12, 8))
-        
-        shortcuts = [
-            ("1.", "Copy any English text (Ctrl+C)"),
-            ("2.", "Audio plays automatically"),
-            ("3.", "Use Stop button to interrupt"),
-            ("4.", "Minimize to tray to keep running"),
-        ]
-        
-        for num, desc in shortcuts:
-            shortcut_frame = ctk.CTkFrame(shortcuts_card, fg_color="transparent")
-            shortcut_frame.pack(fill="x", padx=15, pady=2)
-            
-            ctk.CTkLabel(
-                shortcut_frame,
-                text=num,
-                font=ctk.CTkFont(size=12, weight="bold"),
-                text_color="#3B8ED0",
-                width=25
-            ).pack(side="left")
-            
-            ctk.CTkLabel(
-                shortcut_frame,
-                text=desc,
-                font=ctk.CTkFont(size=12)
-            ).pack(side="left")
-        
-        ctk.CTkFrame(shortcuts_card, height=12, fg_color="transparent").pack()
     
     # ══════════════════════════════════════════════════════════════════════
     # CALLBACKS
@@ -941,6 +1234,10 @@ Features:
             self.random_voice_var.set(False)
             state.use_random_voice = False
     
+    def _on_random_filter_change(self, value):
+        """Callback quando filtro de voz aleatória muda."""
+        state.random_voice_filter = value
+    
     def _toggle_monitoring(self):
         """Alterna monitoramento."""
         state.is_monitoring = self.monitoring_var.get()
@@ -950,9 +1247,53 @@ Features:
         """Alterna modo de voz aleatória."""
         state.use_random_voice = self.random_voice_var.get()
         if state.use_random_voice:
-            self.current_voice_label.configure(text="🎲 Random")
+            filter_text = self.random_filter_var.get()
+            self.current_voice_label.configure(text=f"🎲 Random ({filter_text})")
         else:
             self.current_voice_label.configure(text=self.voice_var.get())
+    
+    def _toggle_save_mp3(self):
+        """Alterna salvamento de MP3."""
+        state.save_mp3_enabled = self.save_mp3_var.get()
+        state.mp3_save_path = self.mp3_path_var.get()
+        
+        if state.save_mp3_enabled:
+            # Cria pasta se não existir
+            try:
+                Path(state.mp3_save_path).mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                print(f"[ERRO] Criar pasta MP3: {e}")
+    
+    def _browse_mp3_folder(self):
+        """Abre diálogo para escolher pasta."""
+        from tkinter import filedialog
+        
+        folder = filedialog.askdirectory(
+            initialdir=self.mp3_path_var.get(),
+            title="Select folder to save MP3 files"
+        )
+        
+        if folder:
+            self.mp3_path_var.set(folder)
+            state.mp3_save_path = folder
+    
+    def _open_mp3_folder(self):
+        """Abre pasta de MP3 no explorador."""
+        folder = self.mp3_path_var.get()
+        
+        # Cria pasta se não existir
+        try:
+            Path(folder).mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        
+        # Abre no explorador de arquivos
+        if sys.platform == 'win32':
+            os.startfile(folder)
+        elif sys.platform == 'darwin':
+            os.system(f'open "{folder}"')
+        else:
+            os.system(f'xdg-open "{folder}"')
     
     def _sync_monitoring_state(self):
         """Sincroniza estado de monitoramento com UI."""
@@ -1003,12 +1344,15 @@ Features:
                 txt = pyperclip.paste()
                 if txt and txt.strip():
                     txt = txt.strip()
+                    state.last_spoken_text = txt  # Salva para CTRL+R
+                    
                     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                     tmp.close()
                     
                     if generate_tts(txt, tmp.name, self._get_voice(), self._get_rate()):
+                        # Salva cópia se habilitado
+                        save_mp3_copy(tmp.name, txt)
                         play_audio(tmp.name)
-                        # Guarda para atualizar UI
                         state.pending_text = txt
             except Exception as e:
                 print(f"[ERRO] Read clipboard: {e}")
@@ -1018,6 +1362,7 @@ Features:
     def _clear_history(self):
         """Limpa histórico."""
         state.last_clipboard = ""
+        state.last_spoken_text = ""
         state.text_history.clear()
         state.pending_text = None
         
@@ -1041,11 +1386,9 @@ Features:
     
     def _on_text_detected(self, text):
         """Callback quando texto é detectado (chamado da thread)."""
-        # Só atualiza se não estiver minimizado
         if state.is_minimized:
             return
         
-        # Usa after para executar na thread principal do Tk
         try:
             self.after(0, lambda: self._update_text_display(text))
         except Exception:
@@ -1057,14 +1400,12 @@ Features:
             return
             
         try:
-            # Atualiza display principal
             self.text_display.configure(state="normal")
             self.text_display.delete("1.0", "end")
             self.text_display.insert("1.0", text)
             self.text_display.configure(state="disabled")
             self.char_count_label.configure(text=f"{len(text)} chars")
             
-            # Atualiza histórico visual
             self._update_history_display()
         except Exception as e:
             print(f"[ERRO] Update display: {e}")
@@ -1075,7 +1416,6 @@ Features:
             return
             
         try:
-            # Remove placeholder se existir
             if hasattr(self, 'history_placeholder'):
                 try:
                     if self.history_placeholder.winfo_exists():
@@ -1083,27 +1423,39 @@ Features:
                 except Exception:
                     pass
             
-            # Remove itens antigos
             for widget in self.history_frame.winfo_children():
                 try:
                     widget.destroy()
                 except Exception:
                     pass
             
-            # Adiciona itens do histórico
-            for item in state.text_history[:20]:  # Mostra últimos 20
+            for item in state.text_history[:20]:
                 item_frame = ctk.CTkFrame(self.history_frame, corner_radius=8)
                 item_frame.pack(fill="x", pady=3)
                 
-                # Timestamp
+                # Header com timestamp e botão de replay
+                header_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+                header_frame.pack(fill="x", padx=10, pady=(8, 2))
+                
                 ctk.CTkLabel(
-                    item_frame,
+                    header_frame,
                     text=item["time"],
                     font=ctk.CTkFont(size=11),
                     text_color="#3B8ED0"
-                ).pack(anchor="w", padx=10, pady=(8, 2))
+                ).pack(side="left")
                 
-                # Text preview
+                # Botão para reler este item
+                replay_btn = ctk.CTkButton(
+                    header_frame,
+                    text="🔄",
+                    width=28,
+                    height=22,
+                    corner_radius=5,
+                    font=ctk.CTkFont(size=11),
+                    command=lambda t=item["text"]: self._replay_history_item(t)
+                )
+                replay_btn.pack(side="right")
+                
                 preview = item["text"][:100] + ("..." if len(item["text"]) > 100 else "")
                 ctk.CTkLabel(
                     item_frame,
@@ -1115,6 +1467,22 @@ Features:
                 
         except Exception as e:
             print(f"[ERRO] Update history: {e}")
+    
+    def _replay_history_item(self, text):
+        """Reproduz um item do histórico."""
+        def replay_thread():
+            try:
+                state.last_spoken_text = text
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                tmp.close()
+                
+                if generate_tts(text, tmp.name, self._get_voice(), self._get_rate()):
+                    save_mp3_copy(tmp.name, text)
+                    play_audio(tmp.name)
+            except Exception as e:
+                print(f"[ERRO] Replay: {e}")
+        
+        threading.Thread(target=replay_thread, daemon=True).start()
     
     def _start_ui_loop(self):
         """Inicia loop de atualização da UI."""
@@ -1131,19 +1499,16 @@ Features:
     
     def _update_ui_loop(self):
         """Loop de atualização da UI."""
-        # Não executa se minimizado ou app fechando
         if state.is_minimized or state.stop_flag:
             return
         
         try:
-            # Atualiza indicador de speaking
             is_playing = is_audio_playing()
             if is_playing:
                 self.speaking_indicator.configure(text="🔊 Speaking...")
             else:
                 self.speaking_indicator.configure(text="")
             
-            # Processa texto pendente
             if state.pending_text and not state.is_minimized:
                 self._update_text_display(state.pending_text)
                 state.pending_text = None
@@ -1151,7 +1516,6 @@ Features:
         except Exception as e:
             print(f"[ERRO] UI Loop: {e}")
         
-        # Agenda próxima atualização
         if not state.stop_flag and not state.is_minimized:
             self._ui_update_job = self.after(200, self._update_ui_loop)
     
@@ -1161,16 +1525,10 @@ Features:
     
     def _minimize_to_tray(self):
         """Minimiza para bandeja do sistema."""
-        # Marca como minimizado ANTES de esconder
         state.is_minimized = True
-        
-        # Para o loop de UI
         self._stop_ui_loop()
-        
-        # Esconde janela
         self.withdraw()
         
-        # Cria ícone do tray se necessário
         if self.tray_icon is None:
             self.tray_icon = create_tray_icon(self)
             self.tray_thread = threading.Thread(target=self.tray_icon.run, daemon=True)
@@ -1178,7 +1536,6 @@ Features:
     
     def _show_from_tray(self):
         """Mostra janela a partir do tray."""
-        # Para o ícone do tray
         if self.tray_icon:
             try:
                 self.tray_icon.stop()
@@ -1186,35 +1543,28 @@ Features:
                 pass
             self.tray_icon = None
         
-        # Marca como não minimizado
         state.is_minimized = False
         
-        # Restaura janela
         self.deiconify()
         self.lift()
         self.focus_force()
         
-        # Reinicia loop de UI
         self._start_ui_loop()
-        
-        # Sincroniza estado
         self._sync_monitoring_state()
         
-        # Processa texto pendente se houver
         if state.pending_text:
             self.after(100, lambda: self._update_text_display(state.pending_text))
             state.pending_text = None
         
-        # Atualiza histórico
         self.after(200, self._update_history_display)
     
     def _quit_app(self):
         """Encerra aplicação."""
         state.stop_flag = True
-        state.is_minimized = True  # Previne atualizações de UI
+        state.is_minimized = True
         
-        # Para o loop de UI
         self._stop_ui_loop()
+        self._unregister_global_hotkey()
         
         if self.tray_icon:
             try:
@@ -1231,7 +1581,6 @@ Features:
         
         cleanup_audio()
         
-        # Fecha janela
         try:
             self.destroy()
         except Exception:
@@ -1264,17 +1613,14 @@ class CloseDialog(ctk.CTkToplevel):
         self.geometry("400x180")
         self.resizable(False, False)
         
-        # Centraliza
         self.update_idletasks()
         x = parent.winfo_x() + (parent.winfo_width() - 400) // 2
         y = parent.winfo_y() + (parent.winfo_height() - 180) // 2
         self.geometry(f"+{x}+{y}")
         
-        # Modal
         self.transient(parent)
         self.grab_set()
         
-        # UI
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(fill="both", expand=True, padx=25, pady=20)
         
@@ -1344,12 +1690,13 @@ class CloseDialog(ctk.CTkToplevel):
 # ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    print("=" * 55)
-    print("   🔊 CLIPBOARD ENGLISH READER")
-    print("=" * 55)
+    print("=" * 60)
+    print("   🔊 CLIPBOARD ENGLISH READER v1.1")
+    print("=" * 60)
     print("   Copy text → Automatic TTS playback")
+    print("   Press Ctrl+R anywhere to re-read last text")
     print("   Minimize to tray to keep running in background")
-    print("=" * 55)
+    print("=" * 60)
     
     app = App()
     app.mainloop()

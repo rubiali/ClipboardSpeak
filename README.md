@@ -294,6 +294,7 @@ pygame>=2.5.0
 pyperclip>=1.8.0
 pystray>=0.19.0
 Pillow>=10.0.0
+keyboard
 ```
 
 ---
