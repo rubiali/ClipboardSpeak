@@ -289,7 +289,7 @@ Crie também este arquivo na raiz do projeto:
 
 ```txt
 customtkinter>=5.0.0
-edge-tts>=6.1.0
+edge-tts
 pygame>=2.5.0
 pyperclip>=1.8.0
 pystray>=0.19.0
