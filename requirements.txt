@@ -1,0 +1,6 @@
+customtkinter==5.2.1
+edge-tts
+pyperclip==1.8.2
+pygame==2.5.2
+pystray==0.19.5
+Pillow==10.2.0
