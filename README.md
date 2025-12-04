@@ -97,7 +97,7 @@ cd ClipboardSpeak
 pip install -r requirements.txt
 
 # Execute
-python clipboardspeak.py
+python main.py
 ```
 
 ### 📦 Dependências
@@ -150,7 +150,7 @@ pip install customtkinter edge-tts pygame pyperclip pystray Pillow
 
 ```
 ClipboardSpeak/
-├── 📄 clipboardspeak.py    # Aplicação principal
+├── 📄 main.py    # Aplicação principal
 ├── 📄 requirements.txt     # Dependências
 ├── 📄 README.md           # Documentação
 ├── 📄 LICENSE             # Licença MIT
@@ -231,7 +231,7 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 
 # Execute
-python clipboardspeak.py
+python main.py
 ```
 
 ### 📦 Build Executável (Windows)
@@ -239,7 +239,7 @@ python clipboardspeak.py
 ```bash
 pip install pyinstaller
 
-pyinstaller --onefile --windowed --icon=assets/icon.ico --name=ClipboardSpeak clipboardspeak.py
+pyinstaller --onefile --windowed --icon=assets/icon.ico --name=ClipboardSpeak main.py
 ```
 
 ---
